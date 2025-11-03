@@ -18,11 +18,8 @@ def sphere(x, y, z, k):
     if k <= 0:
         raise ValueError(f"k needs to be > 0. You got k: {k}")
 
-    # Sphere dimensions
-    if x*x + y*y + z*z <= k ** 2:
-        return True
-    
-    return False
+    hits = x*x + y*y + z*z <= k ** 2
+    return hits
 
 
 def torus(x, y, z, R, r):
@@ -32,23 +29,21 @@ def torus(x, y, z, R, r):
                          f"You got R: {R} and r: {r}")
 
     # Torus dimensions
-    if (np.sqrt(x*x + y*y) - R) ** 2 + z*z <= r ** 2:
-        return True
+    hits = np.sqrt(x*x + y*y) - R) ** 2 + z*z <= r ** 2:
     
-    return False
+    return hits
 
 
 # --------------
 # Sampling
 # --------------
-def uniformrandom(radius):
-    x, y, z = np.random.uniform(-radius, radius, size=3)
-    
-    return x, y, z
+def uniformrandom(radius, seed=None):
+    np.random.seed(seed=seed)
+    return np.random.rand((3, N))
 
 
-def deterministic_XYZ(N):
-    sequence = np.empty((N, 3))
+def deterministic_XYZ(N, seed=None):
+    sequence = np.empty((3, N))
     m = 3.8
 
     # define a self-contained region
@@ -56,10 +51,11 @@ def deterministic_XYZ(N):
     a = m * b * (1 - b)
     
     # 'seed' the deterministic sequence
-    sequence[0] = np.random.uniform(a, b, 3)
+    np.random.seed(seed=seed)
+    sequence[:, 0] = np.random.uniform(a, b, 3)
     
     for i in range(1, N):
-        sequence[i] = m * sequence[i - 1] * (1 - sequence[i - 1])
+        sequence[:, i] = m * sequence[:, i - 1] * (1 - sequence[:, i - 1])
 
     return sequence 
 
@@ -67,19 +63,18 @@ def deterministic_XYZ(N):
 # --------------
 # monte carlo
 # --------------
-def montecarlo(radius, k, R, r, throws):
-    hits = 0 # number of hits in intersection
+def montecarlo(prng, radius, k, R, r, throws):
+    rand = prng(throws)
+    x, y, z = k * (1 - 2 * rand)
 
-    for _ in range(throws):
-        x, y, z = uniformrandom(radius)
+    sphereHits = sphere(x, y, z, k)
+    torusHits = torus(x, y, z, R, r)
 
-        if sphere(x, y, z, k) and torus(x, y, z, R, r):
-            hits += 1
+    totalHits = np.sum(np.logical_and(sphereHits, torusHits))
 
-    box_volume = (2 * radius) ** 3
-    intersection_volume = box_volume * (hits / throws)
+    boxVol = (2 * k) ** 3
 
-    return intersection_volume, hits
+    return totalHits * boxVol / throws
 
 
 def run_monte_carlo(
@@ -98,7 +93,7 @@ def run_monte_carlo(
     # Time progress bar
     t0 = time.perf_counter()
     for _ in trange(N, desc="Monte Carlo runs", leave=False):
-        intersection_volume, hits = montecarlo(radius, k, R, r, throws)
+        intersection_volume, hits = montecarlo(uniformrandom, radius, k, R, r, throws)
         all_volumes.append(intersection_volume)
         all_hits.append(hits)
     t1 = time.perf_counter()
