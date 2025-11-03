@@ -47,8 +47,21 @@ def uniformrandom(radius):
     return x, y, z
 
 
-def deterministic_sampling():
-    return
+def deterministic_XYZ(N):
+    sequence = np.empty((N, 3))
+    m = 3.8
+
+    # define a self-contained region
+    b = m * 0.5 * (1 - 0.5)
+    a = m * b * (1 - b)
+    
+    # 'seed' the deterministic sequence
+    sequence[0] = np.random.uniform(a, b, 3)
+    
+    for i in range(1, N):
+        sequence[i] = m * sequence[i - 1] * (1 - sequence[i - 1])
+
+    return sequence 
 
 
 # --------------
