@@ -29,7 +29,7 @@ def torus(x, y, z, R, r):
                          f"You got R: {R} and r: {r}")
 
     # Torus dimensions
-    hits = np.sqrt(x*x + y*y) - R) ** 2 + z*z <= r ** 2:
+    hits = (np.sqrt(x*x + y*y) - R) ** 2 + z*z <= r ** 2
     
     return hits
 
@@ -37,9 +37,13 @@ def torus(x, y, z, R, r):
 # --------------
 # Sampling
 # --------------
-def uniformrandom(radius, seed=None):
+def uniformrandom(N, seed=None):
     np.random.seed(seed=seed)
-    return np.random.rand((3, N))
+    x = np.random.rand(N)
+    y = np.random.rand(N)
+    z = np.random.rand(N)
+
+    return np.array([x, y, z])
 
 
 def deterministic_XYZ(N, seed=None):
@@ -65,7 +69,7 @@ def deterministic_XYZ(N, seed=None):
 # --------------
 def montecarlo(prng, radius, k, R, r, throws):
     rand = prng(throws)
-    x, y, z = k * (1 - 2 * rand)
+    x, y, z = k * (np.ones((3, throws)) - 2 * rand)
 
     sphereHits = sphere(x, y, z, k)
     torusHits = torus(x, y, z, R, r)
@@ -74,7 +78,7 @@ def montecarlo(prng, radius, k, R, r, throws):
 
     boxVol = (2 * k) ** 3
 
-    return totalHits * boxVol / throws
+    return totalHits * boxVol / throws, totalHits
 
 
 def run_monte_carlo(
